@@ -1,109 +1,241 @@
-# Flutter 无缝循环播放器
+# 🎵 Seamless Loop Music Player (Flutter)
 
-**目标**: 构建一个跨平台 (Windows + Android/iOS) 的本地音乐播放器，核心功能是基于**采样点 (Sample)** 级精度的无缝循环播放。
+一个跨平台的无缝循环音乐播放器，支持 Windows、Android、iOS 和 macOS。
 
----
-
-## 1. 核心设计理念 (Core Philosophy)
-
-* **极致精度**: 采用**采样点 (Sample)** 级数据存储与控制，确保无缝连接时的绝对平滑。
-* **差异化定位**:
-  * **电脑端 (Windows)**: **生产与管理中心**。集成 `pymusiclooper` 进行音频分析，生成循环数据；提供强大的管理与播放界面。
-  * **手机端 (Mobile)**: **纯粹播放终端**。轻量化设计，直接读取电脑端生成的音频与配置文件，随时随地享受无缝音乐。
-* **单项目，多形态**: 使用同一个 Flutter 工程，但根据平台加载完全不同的 UI 布局，共享底层核心逻辑。
+![Flutter](https://img.shields.io/badge/Flutter-3.10.8-blue)
+![Dart](https://img.shields.io/badge/Dart-3.10.8-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
-## 2. 技术栈选型 (Tech Stack)
+## ✨ 特性
 
-| 组件                    | 选型                         | 理由                                                                                                          |
-| :---------------------- | :--------------------------- | :------------------------------------------------------------------------------------------------------------ |
-| **UI 框架**       | **Flutter**            | 跨平台能力强，渲染性能高，UI 定制灵活。                                                                       |
-| **音频引擎**      | **media_kit**          | 基于**libmpv**。支持无缝播放 (Gapless)，格式兼容性极强，支持底层属性控制 (Properties)，适合高精度需求。 |
-| **音频分析 (PC)** | **pymusiclooper**      | Python 命令行工具。利用其成熟的算法自动提取最佳循环点。                                                       |
-| **数据存储**      | **JSON**               | 自定义结构，存储采样率与循环点，通用性强，易于跨端解析。                                                      |
-| **状态管理**      | *待定* (Provider/Riverpod) | 用于管理播放列表、当前歌曲状态等。                                                                            |
+- 🎯 **精准循环**: 支持采样级精度的 A-B 循环
+- 🤖 **智能匹配**: 基于 SAD 算法自动寻找最佳循环点
+- 📁 **多格式支持**: WAV (PCM) 和 MP3 (需要 ffmpeg)
+- 💾 **配置持久化**: 自动保存和加载循环点配置
+- 🖥️ **桌面优化**: 完整的桌面端 UI，支持文件管理和编辑
+- 📱 **移动端支持**: 基础的移动端播放功能
 
 ---
 
-## 3. 架构设计 (Architecture)
+## 🚀 快速开始
 
-采用 **"One Project, Multiple Layouts"** (单工程，多布局) 策略。
+### 环境要求
 
-### 📂 目录结构规划
+- Flutter SDK 3.10.8+
+- Dart SDK 3.10.8+
+- (可选) ffmpeg - 用于 MP3 支持
 
-```text
+### 安装
+
+```bash
+# 克隆仓库
+git clone <repository-url>
+cd seamless-loop-music-flutter
+
+# 安装依赖
+flutter pub get
+
+# 运行应用
+flutter run
+```
+
+### 安装 ffmpeg (可选，用于 MP3 支持)
+
+#### Windows
+```powershell
+# 下载 ffmpeg
+https://www.gyan.dev/ffmpeg/builds/
+
+# 解压并添加到 PATH
+setx PATH "%PATH%;C:\ffmpeg\bin"
+```
+
+#### Linux
+```bash
+sudo apt install ffmpeg
+```
+
+#### macOS
+```bash
+brew install ffmpeg
+```
+
+---
+
+## 📖 使用指南
+
+### 基本使用
+
+1. **打开音频文件**
+   - 点击顶部工具栏的"打开文件"按钮
+   - 选择 WAV 或 MP3 文件
+
+2. **设置循环点**
+   - 在右侧编辑器中输入起始和结束采样数
+   - 或者点击"智能匹配"自动寻找最佳循环点
+
+3. **应用并试听**
+   - 点击"应用并试听"按钮
+   - 音频将从循环起点开始无缝循环播放
+
+### 智能匹配
+
+智能匹配功能使用 SAD (Sum of Absolute Differences) 算法：
+
+1. 提取循环终点之前 1 秒的音频作为"指纹"
+2. 在循环起点附近 ±2 秒范围内搜索
+3. 找到与终点最匹配的位置
+4. 自动调整循环起点
+
+**注意**: 
+- WAV 文件匹配速度快 (~70ms)
+- MP3 文件需要 ffmpeg，速度较慢 (~770ms)
+
+---
+
+## 🏗️ 项目结构
+
+```
 lib/
-├── core/                // 核心逻辑 (全平台共用)
-│   ├── audio/           // 音频服务 (封装 media_kit)
-│   ├── data/            // 数据模型 (LoopConfig, Song)
-│   ├── utils/           // 工具类 (JSON解析, 采样转时间)
-│   └── services/        // 外部服务 (调用 pymusiclooper)
-├── ui/                  // 界面层 (按平台区分)
-│   ├── desktop/         // 💻 Windows 专用界面
-│   │   ├── analysis/    // 分析面板 (调用 Python)
-│   │   ├── playlist/    // 桌面级列表管理
-│   │   └── player_ui/   // 桌面播放器 UI
-│   └── mobile/          // 📱 Android/iOS 专用界面
-│       ├── home/        // 手机主页
-│       └── player_page/ // 沉浸式播放页 (大封面, 触摸交互)
-└── main.dart            // 入口 (判断平台 -> 加载对应 UI)
+├── core/
+│   ├── audio/              # 音频播放服务
+│   ├── data/               # 数据模型
+│   └── services/           # 业务逻辑服务
+├── ui/
+│   ├── desktop/            # 桌面端 UI
+│   └── mobile/             # 移动端 UI
+└── main.dart               # 应用入口
+
+docs/
+├── DEVELOPMENT_LOG.md      # 开发日志
+└── MP3_SUPPORT_PLAN.md     # MP3 支持计划
 ```
 
 ---
 
-## 4. 核心数据格式 (Loop Configuration)
+## 🔧 技术栈
 
-文件命名: `loop_config.json` (或类似的数据库文件)
-**关键**: 必须记录 `sample_rate` (采样率)，以便将 Sample 转换为时间。
+### 核心依赖
 
-```json
-{
-  "version": "1.0",
-  "library": [
-    {
-      "filename": "01.ogg",
-      "title": "BGM_Title",
-      "artist": "Artist_Name",
-      "sample_rate": 44100,        // 核心参数：采样率
-      "total_samples": 15876000,   // 总采样数 (校验用)
-      "loops": [
-        {
-          "start_point": 2158092,  // 精确循环起点 (Sample Index)
-          "end_point": 5819712,    // 精确循环终点 (Sample Index)
-          "score": 0.98,           // 推荐度评分
-          "is_primary": true       // 是否为默认循环段
-        }
-      ]
-    }
-  ]
-}
+- **just_audio** (0.10.5) - 音频播放
+- **audio_session** (0.2.2) - 音频会话管理
+- **provider** (6.1.5) - 状态管理
+- **file_picker** (10.3.10) - 文件选择
+- **path_provider** (2.1.5) - 路径管理
+- **ffi** (2.1.5) - 原生代码互操作（备用）
+
+### 算法实现
+
+- **循环播放**: ClippingAudioSource + LoopingAudioSource
+- **智能匹配**: SAD (Sum of Absolute Differences)
+- **音频读取**: 
+  - WAV: 纯 Dart 实现
+  - MP3: ffmpeg 外部进程调用
+
+---
+
+## 📊 性能
+
+### 智能匹配性能 (44100Hz, 1秒模板, 4秒搜索区)
+
+| 格式 | 读取时间 | 匹配时间 | 总时间 |
+|------|---------|---------|--------|
+| WAV  | ~20ms   | ~50ms   | ~70ms  |
+| MP3  | ~720ms  | ~50ms   | ~770ms |
+
+**注意**: MP3 性能较低是因为使用外部 ffmpeg 进程。未来版本将迁移到 FFI + minimp3，预计性能提升 6.5 倍。
+
+---
+
+## 🗺️ 路线图
+
+### ✅ 已完成
+
+- [x] 桌面端完整 UI
+- [x] WAV 文件支持
+- [x] MP3 文件支持（基于 ffmpeg）
+- [x] 智能循环点匹配
+- [x] 配置持久化
+- [x] 无缝循环播放
+
+### 🚧 进行中
+
+- [ ] 移动端 UI 完善
+- [ ] 性能优化（FFI + minimp3）
+- [ ] 波形可视化
+
+### 📅 计划中
+
+- [ ] PyMusicLooper 集成
+- [ ] FFT 互相关算法
+- [ ] 金字塔搜索算法
+- [ ] 多循环点管理
+- [ ] 云同步功能
+
+---
+
+## 🐛 已知问题
+
+1. **MP3 性能**: 使用 ffmpeg 外部进程，延迟较高
+2. **Flutter Analyze 警告**: 33 个 deprecated_member_use 警告
+3. **移动端 UI**: 功能不完整
+
+详见 [开发日志](docs/DEVELOPMENT_LOG.md)
+
+---
+
+## 📚 文档
+
+- [开发日志](docs/DEVELOPMENT_LOG.md) - 详细的开发过程记录
+- [MP3 支持计划](docs/MP3_SUPPORT_PLAN.md) - MP3 支持的实现方案
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+### 开发环境设置
+
+```bash
+# 克隆仓库
+git clone <repository-url>
+cd seamless-loop-music-flutter
+
+# 安装依赖
+flutter pub get
+
+# 运行测试
+flutter test
+
+# 代码检查
+flutter analyze
 ```
 
 ---
 
-## 5. 工作流 (Workflow)
+## 📄 许可证
 
-### 阶段一：电脑端生产 (Windows)
-
-1. 用户导入音频文件/文件夹。
-2. App 后台调用 `pymusiclooper` (CLI) 分析音频。
-3. 获取分析结果 (采样点数据)，写入 `loop_config.json`。
-4. 用户在 App 内试听，确认无缝效果。
-
-### 阶段二：同步 (Sync)
-
-1. 用户将 **音频文件** 和 **`loop_config.json`** 传输到手机 (通过 USB/网盘/局域网)。
-
-### 阶段三：手机端消费 (Mobile)
-
-1. App 启动，读取 `loop_config.json` 建立索引。
-2. 用户点击播放 -> `media_kit` 加载音频。
-3. **循环逻辑**:
-   * 读取 `sample_rate` 和 `start/end_point`。
-   * 底层设置 `loop-file` 或在到达 `end_point` 时精确 Seek 回 `start_point`。
-4. 实现完美无缝循环。
+本项目继承自 C# WPF 版本的许可证。
 
 ---
 
-*Validated by cpu & Lev Zenith*
+## 🙏 致谢
+
+- **C# WPF 版本**: 本项目的原始实现
+- **just_audio**: 优秀的 Flutter 音频播放库
+- **minimp3**: 轻量级的 MP3 解码器
+- **ffmpeg**: 强大的多媒体处理工具
+
+---
+
+## 📞 联系方式
+
+如有问题或建议，请提交 Issue。
+
+---
+
+**最后更新**: 2026-02-07  
+**版本**: 1.0.0
