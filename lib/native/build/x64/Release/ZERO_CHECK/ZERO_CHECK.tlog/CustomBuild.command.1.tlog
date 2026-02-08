@@ -1,0 +1,10 @@
+^D:\SEAMLESS LOOP MUSIC\SEAMLESS-LOOP-MUSIC-FLUTTER\LIB\NATIVE\BUILD\CMAKEFILES\E848233CE5495F19BD8F8D2712875B10\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SD:/seamless loop music/seamless-loop-music-flutter/lib/native" "-BD:/seamless loop music/seamless-loop-music-flutter/lib/native/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "D:/seamless loop music/seamless-loop-music-flutter/lib/native/build/audio_decoders.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

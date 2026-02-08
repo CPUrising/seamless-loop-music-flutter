@@ -5,6 +5,8 @@ import 'package:just_audio/just_audio.dart';
 import '../data/loop_config.dart';
 import 'wav_reader.dart';
 import 'mp3_reader.dart';
+import 'mp3_reader_ffi.dart';
+import 'ogg_reader_ffi.dart';
 
 /// 音频循环点智能匹配服务
 /// 基于 SAD (Sum of Absolute Differences) 算法
@@ -95,8 +97,9 @@ class LoopMatcherService {
   /// 
   /// 当前支持的格式：
   /// - ✅ WAV 文件（PCM 格式）
-  /// - ✅ MP3 文件（需要 ffmpeg）
-  /// - ⏳ OGG/FLAC（未来版本）
+  /// - ✅ MP3 文件（FFI + minimp3）
+  /// - ✅ OGG 文件（FFI + stb_vorbis）
+  /// - ⏳ FLAC（未来版本）
   Future<Float32List> _readSamples(
     String filePath,
     int startSample,
@@ -112,30 +115,77 @@ class LoopMatcherService {
         await reader.parseHeader();
         return await reader.readSamples(startSample, count);
       } else if (ext == 'mp3') {
-        // 检查 ffmpeg 是否可用
-        final ffmpegAvailable = await Mp3Reader.isFFmpegAvailable();
-        if (!ffmpegAvailable) {
+        // 优先使用 FFI 版本（高性能）
+        final ffiAvailable = Mp3ReaderFFI.isFFIAvailable();
+        
+        if (ffiAvailable) {
+          // 使用 FFI + minimp3（快速）
+          final reader = Mp3ReaderFFI(filePath);
+          try {
+            await reader.parseHeader();
+            final samples = await reader.readSamples(startSample, count);
+            reader.dispose();
+            return samples;
+          } catch (e) {
+            reader.dispose();
+            rethrow;
+          }
+        } else {
+          // 回退到 ffmpeg 方案（慢速）
+          final ffmpegAvailable = await Mp3Reader.isFFmpegAvailable();
+          if (!ffmpegAvailable) {
+            throw UnsupportedError(
+              'MP3 解码需要 ffmpeg 或 FFI 库\n\n'
+              '方案 1（推荐）：使用 FFI + minimp3\n'
+              '- 确保 mp3_decoder.dll 在正确位置\n\n'
+              '方案 2：安装 ffmpeg\n'
+              '- 下载地址：https://ffmpeg.org/download.html\n'
+              '- 确保 ffmpeg 在系统 PATH 中\n\n'
+              '方案 3：转换为 WAV 格式\n'
+              '- 命令：ffmpeg -i input.mp3 output.wav'
+            );
+          }
+
+          // 使用 MP3 读取器（ffmpeg）
+          final reader = Mp3Reader(filePath);
+          await reader.parseHeader();
+          return await reader.readSamples(startSample, count);
+        }
+      } else if (ext == 'ogg' || ext == 'oga') {
+        // OGG 文件 - 使用 FFI + stb_vorbis
+        final ffiAvailable = OggReaderFFI.isFFIAvailable();
+        
+        if (!ffiAvailable) {
           throw UnsupportedError(
-            'MP3 解码需要 ffmpeg\n\n'
-            '请安装 ffmpeg 并确保它在系统 PATH 中。\n\n'
-            '下载地址：\n'
-            'https://ffmpeg.org/download.html\n\n'
-            '或者将 MP3 文件转换为 WAV 格式：\n'
-            'ffmpeg -i input.mp3 output.wav'
+            'OGG 解码需要 FFI 库\n\n'
+            '请确保 ogg_decoder.dll 在正确位置\n'
+            '开发环境路径: lib/native/build/Release/ogg_decoder.dll\n\n'
+            '如果 DLL 不存在,请重新编译:\n'
+            'cd lib/native\n'
+            'cmake -S . -B build -G "Visual Studio 17 2022" -A x64\n'
+            'cmake --build build --config Release'
           );
         }
-
-        // 使用 MP3 读取器
-        final reader = Mp3Reader(filePath);
-        await reader.parseHeader();
-        return await reader.readSamples(startSample, count);
+        
+        // 使用 FFI + stb_vorbis（快速）
+        final reader = OggReaderFFI(filePath);
+        try {
+          await reader.parseHeader();
+          final samples = await reader.readSamples(startSample, count);
+          reader.dispose();
+          return samples;
+        } catch (e) {
+          reader.dispose();
+          rethrow;
+        }
       } else {
         // 其他格式
         throw UnsupportedError(
           '不支持的文件格式：$ext\n\n'
           '当前版本支持：\n'
           '- WAV 文件（PCM 格式）\n'
-          '- MP3 文件（需要 ffmpeg）\n\n'
+          '- MP3 文件（FFI + minimp3）\n'
+          '- OGG 文件（FFI + stb_vorbis）\n\n'
           '请将文件转换为支持的格式后再试。'
         );
       }

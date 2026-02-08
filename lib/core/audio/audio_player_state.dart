@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../audio/audio_loop_service.dart';
+import 'audio_loop_service.dart';
 import '../data/loop_config.dart';
 import '../services/config_manager.dart';
 
