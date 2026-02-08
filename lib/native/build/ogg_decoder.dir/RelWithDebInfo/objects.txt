@@ -1,2 +1,0 @@
-D:/seamless loop music/seamless-loop-music-flutter/lib/native/build/ogg_decoder.dir/RelWithDebInfo/ogg_decoder.obj
-D:/seamless loop music/seamless-loop-music-flutter/lib/native/build/ogg_decoder.dir/RelWithDebInfo/stb_vorbis.obj
