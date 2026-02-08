@@ -5,8 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../core/audio/audio_player_state.dart';
 import '../../../core/data/loop_config.dart';
 import '../../../core/services/loop_matcher_service.dart';
-// TODO: 以后集成 pymusiclooper
-// import '../../../core/services/pymusiclooper_service.dart';
+import '../../../src/rust/api.dart' as rust_api;
 
 /// 桌面端播放器主界面
 class DesktopPlayerPage extends StatefulWidget {
@@ -58,8 +57,11 @@ class _DesktopPlayerPageState extends State<DesktopPlayerPage> {
       var config = await playerState.findConfigByFilename(fileName);
 
       if (config == null) {
-        // 创建默认配置
-        config = _createDefaultConfig(filePath, fileName);
+        // 使用 Rust 获取准确的元数据
+        final info = await playerState.getAudioInfo(filePath);
+        
+        // 创建真实配置
+        config = _createRealConfig(filePath, fileName, info);
         
         // 保存配置
         await playerState.addOrUpdateConfig(config);
@@ -94,20 +96,17 @@ class _DesktopPlayerPageState extends State<DesktopPlayerPage> {
     }
   }
 
-  /// 创建默认配置
-  LoopConfig _createDefaultConfig(String filePath, String fileName) {
-    // 默认采样率 44100 Hz
-    const defaultSampleRate = 44100;
-    // 假设 3 分钟的音频
-    const estimatedDuration = 180; // 秒
-    const totalSamples = defaultSampleRate * estimatedDuration;
+  /// 创建真实配置（基于 Rust 获取的元数据）
+  LoopConfig _createRealConfig(String filePath, String fileName, rust_api.SimpleAudioInfo info) {
+    final sampleRate = info.sampleRate ?? 44100;
+    final totalSamples = info.totalSamples?.toInt() ?? (sampleRate * 180);
 
     return LoopConfig(
       filename: fileName,
-      filePath: filePath, // 保存完整路径
-      title: fileName.replaceAll(RegExp(r'\.(mp3|wav|ogg|flac|m4a)$', caseSensitive: false), ''),
-      artist: 'Unknown',
-      sampleRate: defaultSampleRate,
+      filePath: filePath,
+      title: info.title ?? fileName.replaceAll(RegExp(r'\.(mp3|wav|ogg|flac|m4a)$', caseSensitive: false), ''),
+      artist: info.artist ?? 'Unknown',
+      sampleRate: sampleRate,
       totalSamples: totalSamples,
       loops: [
         LoopPoint(

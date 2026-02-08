@@ -2,11 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'audio_loop_service.dart';
 import '../data/loop_config.dart';
 import '../services/config_manager.dart';
+import '../../src/rust/api.dart' as rust_api;
 
 /// 音频播放器状态管理
 class AudioPlayerState extends ChangeNotifier {
   final AudioLoopService _audioService = AudioLoopService();
   final ConfigManager _configManager = ConfigManager();
+
+  /// 使用 Rust 获取音频详细信息
+  Future<rust_api.SimpleAudioInfo> getAudioInfo(String filePath) async {
+    return await rust_api.getAudioInfo(path: filePath);
+  }
 
   List<LoopConfig> _library = [];
   LoopConfig? _currentConfig;

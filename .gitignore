@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Rust related
+rust/target/
+rust/target-desktop/
+flutter_rust_bridge.yaml
+flutter_rust_bridge_codegen.exe
+codegen_error.txt
+rust_build_error.txt

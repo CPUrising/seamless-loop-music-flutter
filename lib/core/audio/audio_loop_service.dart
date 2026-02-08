@@ -119,10 +119,11 @@ class AudioLoopService {
     if (_currentConfig == null) return;
     
     _currentLoop = loop;
-    final filePath = _currentConfig!.filename;
+    // 使用完整路径而不是仅文件名
+    final path = _currentConfig!.filePath ?? _currentConfig!.filename;
     
     // 重新加载音频源
-    final loopSource = _createLoopingSource(filePath, loop, _currentConfig!.sampleRate);
+    final loopSource = _createLoopingSource(path, loop, _currentConfig!.sampleRate);
     await _player.setAudioSource(loopSource);
     
     // 如果之前在播放，继续播放

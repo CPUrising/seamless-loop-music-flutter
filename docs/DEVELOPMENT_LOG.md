@@ -114,6 +114,14 @@
 - ✅ 创建 ogg_reader_ffi.dart (高性能读取器)
 - ✅ 更新 loop_matcher_service.dart (集成 OGG 支持)
 
+#### **20:00 - 20:45** Rust 革命：统一音频解码架构
+- ✅ 引入 `symphonia` 库，实现 Rust 原生全格式音频解码
+- ✅ 实现 `read_audio_samples` 接口，支持采样范围读取并自动混音为单声道
+- ✅ 修复 `flutter_rust_bridge` v2 配置文件迁移问题
+- ✅ 彻底重构 `LoopMatcherService`，移除冗余的 FFI 和 ffmpeg 调用逻辑
+- ✅ 完成新版 `rust.dll` 编译与全量部署
+- ✅ 性能预期：比 ffmpeg 方案快 10 倍以上，比 C-FFI 方案更稳定且易于维护
+
 ---
 
 ## 🏗️ 项目架构

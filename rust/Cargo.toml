@@ -1,0 +1,22 @@
+[package]
+name = "rust"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.11.1"
+lofty = "0.22.4"
+serde = { version = "1", features = ["derive"] }
+symphonia = { version = "0.5.4", features = ["all"] }
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.61.3"
+features = [
+    "Media_Playback",
+    "Storage",
+    "Storage_Streams",
+    "Storage_FileProperties"
+]
