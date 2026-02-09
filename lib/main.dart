@@ -5,7 +5,10 @@ import 'core/audio/audio_player_state.dart';
 import 'ui/mobile/player_page/mobile_player_page.dart';
 import 'ui/desktop/player_ui/desktop_player_page.dart';
 
-void main() {
+import 'src/rust/frb_generated.dart';
+
+Future<void> main() async {
+  await RustLib.init();
   runApp(const LoopMusicApp());
 }
 

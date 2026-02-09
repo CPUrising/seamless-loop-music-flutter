@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -44,7 +45,14 @@ class _DesktopPlayerPageState extends State<DesktopPlayerPage> {
       });
 
       // 加载文件
-      await _loadAudioFile(filePath, fileName);
+      print('🔍 DEBUG: Selected file path: "$filePath"'); // 打印路径
+      
+      // 这里的 _loadAudioFile 会调用 playerState.loadAndPlay
+      try {
+        await _loadAudioFile(filePath, fileName);
+      } catch (e) {
+        print('❌ DEBUG: Load failed: $e');
+      }
     }
   }
 
@@ -546,6 +554,20 @@ class _DesktopPlayerPageState extends State<DesktopPlayerPage> {
           // 使用保存的完整路径，如果没有则使用 filename
           final path = config.filePath ?? config.filename;
           
+          // 检查文件是否存在
+          final file = File(path);
+          if (!await file.exists()) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('文件不存在: $path'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+
           try {
             await playerState.loadAndPlay(path, config);
             
@@ -799,12 +821,34 @@ class _DesktopPlayerPageState extends State<DesktopPlayerPage> {
                   overlayColor: Colors.purple.withOpacity(0.2),
                   trackHeight: 4,
                 ),
-                child: Slider(
-                  value: playerState.currentPosition.inMilliseconds.toDouble(),
-                  max: playerState.totalDuration.inMilliseconds.toDouble().clamp(1, double.infinity),
-                  onChanged: (value) {
-                    playerState.seek(Duration(milliseconds: value.toInt()));
-                  },
+                child: Builder(
+                  builder: (context) {
+                    // 安全计算进度条数值，防止 value > max 导致的崩溃
+                    double maxDuration = playerState.totalDuration.inMilliseconds.toDouble();
+                    
+                    // 如果播放器还没准备好时长，尝试从配置中获取（Rust 提供的精确时长）
+                    if (maxDuration <= 0 && playerState.currentConfig != null) {
+                       final config = playerState.currentConfig!;
+                       if (config.sampleRate > 0) {
+                         maxDuration = (config.totalSamples / config.sampleRate * 1000);
+                       }
+                    }
+                    
+                    // 确保 max 至少为 1.0
+                    if (maxDuration <= 0) maxDuration = 1.0;
+
+                    final currentPos = playerState.currentPosition.inMilliseconds.toDouble();
+                    // 确保 value 不超过 max
+                    final value = currentPos.clamp(0.0, maxDuration);
+
+                    return Slider(
+                      value: value,
+                      max: maxDuration,
+                      onChanged: (newValue) {
+                        playerState.seek(Duration(milliseconds: newValue.toInt()));
+                      },
+                    );
+                  }
                 ),
               ),
               Padding(

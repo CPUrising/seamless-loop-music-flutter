@@ -162,14 +162,27 @@ fn process_buffer<S>(
     let num_channels = planes.planes().len();
     let num_frames = buf.frames();
 
+    // Force output to be Stereo (2 channels)
+    // Interleaved: L, R, L, R, ...
     for frame_idx in 0..num_frames {
         let global_idx = *current_idx;
         if global_idx >= start && global_idx < end {
-            let mut mixed: f32 = 0.0;
-            for channel_idx in 0..num_channels {
-                mixed += planes.planes()[channel_idx][frame_idx].into_sample();
-            }
-            output.push(mixed / num_channels as f32);
+            // Get Left channel sample
+            let left_sample = if num_channels > 0 {
+                planes.planes()[0][frame_idx].into_sample()
+            } else {
+                0.0
+            };
+
+            // Get Right channel sample (or duplicate Left if mono)
+            let right_sample = if num_channels > 1 {
+                planes.planes()[1][frame_idx].into_sample()
+            } else {
+                left_sample // Mono -> Stereo (duplicate)
+            };
+
+            output.push(left_sample);
+            output.push(right_sample);
         }
         *current_idx += 1;
         if *current_idx >= end {

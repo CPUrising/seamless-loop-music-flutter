@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/audio/audio_player_state.dart';
+import 'package:loopmusic_flutter/core/audio/audio_player_state.dart';
 
 /// 移动端播放页面
 class MobilePlayerPage extends StatelessWidget {
